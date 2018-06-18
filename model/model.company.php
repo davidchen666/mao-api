@@ -3,45 +3,66 @@
 class CompanyModel extends AgentModel
 {
 
-    //获取公司信息
-    public function getCompanyInfo(){
-        $pData = getData();
-        $sql = "SELECT user_id,user_name FROM user_admin where user_id in(select user_id from user_admin_token where user_token='{$pData['token']}' AND login_state=1)";
-        $ret = $this->mysqlQuery($sql, "all");
-        if(count($ret) === 1){
-        	return to_success($ret[0]);
-        }else{
-        	return to_error('无效的token。请重新登录。');
-        }
-    }
-
     //获取公司列表
     public function getCompanyList(){
         $pData = getData();
         $filter = '';
+        $filter2 = '';
+        $filterTotal = '';
         //当前的页码
         $currentPage = $pData['currentPage'] ? (int)$pData['currentPage'] : 1;
         //每页显示的最大条数
         $pageSize = $pData['pageSize'] ? (int)$pData['pageSize'] : 10;
         //user_state=-4表示已删除的用户
-        $filter = 'AND user_state <> -4 ';
+        // $filter = 'AND user_state <> -4 ';
         //搜索条件
         if($pData['info_state']){
             $filter .= " AND info_state='{$pData['info_state']}' ";
         }
-        if($pData['connect_state']){
-            $filter .= " AND connect_state='{$pData['info_state']}' ";
+        // var_dump($pData);die();
+        // if($pData['connect_state']){
+        //     $filter .= " AND connect_state='{$pData['connect_state']}' ";
+        // }
+        if($pData['dateRange'] && count($pData['dateRange']) === 2){
+            $filterTotal .= " AND (bb.create_date>='{$pData['dateRange'][0]}' AND bb.create_date<='{$pData['dateRange'][1]}') ";
         }
         if($pData['searchVal']){
-            $filter .= " AND (company_name like '%{$pData['searchVal']}%' OR domain_name like '%{$pData['searchVal']}%' OR mail_brand like '%{$pData['searchVal']}%' OR domain_info like '%{$pData['searchVal']}%' OR person_mail like '%{$pData['searchVal']}%' OR remark like '%{$pData['searchVal']}%' ) ";
+            $filterTotal .= " AND (aa.company_name like '%{$pData['searchVal']}%' OR aa.domain_name like '%{$pData['searchVal']}%' OR aa.mail_brand like '%{$pData['searchVal']}%' OR aa.domain_info like '%{$pData['searchVal']}%' OR aa.person_mail like '%{$pData['searchVal']}%' OR aa.phone like '%{$pData['searchVal']}%' or bb.remark like '%{$pData['searchVal']}%' ) ";
+            // $filter .= "AND bb.remark like '%{$pData['searchVal']}%' ";
         }
+        $nowDate = date("Y-m-d",time());
+        // $filter2 .= " AND state=1 AND create_date like '%{$nowDate}%' ";
+        $filter2 .= " AND state=1 AND id in(SELECT MAX(id) FROM company_connect_log GROUP BY company_id ) ";
         //总条数
-        $res['page']['total'] = $this->__getCompanyCount($filter);
+        $res['page']['total'] = $this->__getCompanyCount($filter,true,$filter2,$filterTotal);
         //分页查询
         $pageFilter .= " LIMIT " . ($currentPage-1) * $pageSize . "," . $pageSize;
-        $sql = "SELECT * FROM company WHERE 1=1 {$filter} order by 1 desc {$pageFilter}";
+        //排序
+        $sortFilter = 'order by 1 desc';
+        if(!empty($pData['order']) && !empty($pData['prop'])){
+            $propStr = $pData['prop'];
+            $orderStr = $pData['order'] === 'ascending'? 'asc':'desc';
+            if($pData['prop'] === 'log_create_date'){
+               $propStr = 'bb.create_date';
+            }
+            $sortFilter = " order by {$propStr} {$orderStr} ";
+        }
+        // $sql = "SELECT * FROM company_list WHERE 1=1 {$filter} order by 1 desc {$pageFilter}";
+        //aa.*,bb.create_date log_create_date,if(bb.create_date IS NULL,'-1','1') as connect_state,bb.remark
+        $sql = "SELECT aa.*,bb.create_date log_create_date,bb.remark
+                FROM (SELECT * FROM company_list WHERE 1=1 {$filter} ) AS aa
+                LEFT JOIN (SELECT * FROM company_connect_log WHERE 1=1 {$filter2} ) AS bb
+                ON aa.id=bb.company_id WHERE 1=1 {$filterTotal} {$sortFilter} {$pageFilter}";
         $res['sql'] = $sql;
         $res['items'] = $this->mysqlQuery($sql, "all");
+        foreach ($res['items'] as $k => $v) {
+            $res['items'][$k]['connect_state'] = '-1';
+            $logDate = date("Y-m-d",strtotime($v['log_create_date']));
+            // var_dump($logDate,$nowDate);
+            if($logDate  === $nowDate){
+                $res['items'][$k]['connect_state'] = '1';
+            }
+        }
         return to_success($res);
     }
 
@@ -49,113 +70,152 @@ class CompanyModel extends AgentModel
     public function addCompany(){
         $pData = getData();
         //验证数据
-        if(!$pData['username'] && strlen($pData['username']) < 4){
-            return to_error('用户名不能为空且至少4位。');
+        if(!$pData['company_name'] && strlen($pData['company_name']) < 1){
+            return to_error('公司名称不能为空且至少1位。');
         }
-        if(!$pData['password'] && strlen($pData['username']) < 6){
-            return to_error('密码不能为空且不能至少6位。');
+        if(!$pData['info_state'] && ($pData['info_state'] != -1 || $pData['info_state'] != 1)){
+            return to_error('请选择信息状态');
         }
-        //查看用户名是否已经重复
-        $filter = " AND user_name = '{$pData['username']}' ";
+        // if(!$pData['connect_state'] && ($pData['connect_state'] != -1 || $pData['connect_state'] != 1)){
+        //     return to_error('请选择联系状态');
+        // }
+        //查看公司名是否已经重复
+        $filter = " AND company_name = '{$pData['company_name']}' ";
         if($this->__getCompanyCount($filter) > 0){
-            return to_error('该用户名已重复，请更换用户名。');
+            return to_error('该公司名已重复，请更换公司名。');
         }
         $arrData = array(
-            "user_name" => $pData['username'],
-            "user_pwd" => $pData['password'],
-            "user_state" => 1,
-            "user_realName" => $pData['realname'],
-            "user_mobile" => $pData['mobile'],
-            "user_mail" => $pData['email'],
-            "user_remark" => $pData['remark'],
+            "company_name" => trim($pData['company_name']),
+            "domain_info" => trim($pData['domain_info']),
+            "domain_name" => trim($pData['domain_name']),
+            "info_state" => $pData['info_state'],
+            "mail_brand" => trim($pData['mail_brand']),
+            "person_mail" => trim($pData['person_mail']),
+            "phone" => trim($pData['phone']),
             "create_date" => NOW,
             "update_date" => NOW
         );
-        return to_success($this->mysqlInsert("user_admin", $arrData, 'single', true));
+        return to_success($this->mysqlInsert("company_list", $arrData, 'single', true));
     }
 
     //编辑公司信息
     public function editCompany(){
         $pData = getData();
         //验证数据
-        // if(!$pData['username'] && strlen($pData['username']) < 4){
-        //     return to_error('操作失败,用户名不能为空且至少4位。');
-        // }
-        //查看用户是否存在
-        $filter = " user_name = '{$pData['username']}' AND user_id='{$pData['userid']}' ";
+        if(!$pData['company_name'] && strlen($pData['company_name']) < 1){
+            return to_error('公司名称不能为空且至少1位。');
+        }
+        if(!$pData['info_state'] && ($pData['info_state'] != -1 || $pData['info_state'] != 1)){
+            return to_error('请选择信息状态');
+        }
+        if(!$pData['connect_state'] && ($pData['connect_state'] != -1 || $pData['connect_state'] != 1)){
+            return to_error('请选择联系状态');
+        }
+        //查看公司名是否存在
+        $filter = " id = '{$pData['id']}' ";
         if($this->__getCompanyCount(' AND '.$filter) === 0){
-            return to_error('操作失败！该用户不存在。');
+            return to_error('操作失败！该公司不存在。');
         }else if($this->__getCompanyCount(' AND '.$filter) > 1){
-            return to_error('操作失败！非法用户，存在多个该用户名用户');
+            return to_error('操作失败！非法公司，存在多个该公司名公司');
         }
         $arrData = array(
-            "user_state" => $pData['state'],
-            "user_realName" => $pData['realname'],
-            "user_mobile" => $pData['mobile'],
-            "user_mail" => $pData['email'],
-            "user_remark" => $pData['remark'],
+            "company_name" => trim($pData['company_name']),
+            "domain_info" => trim($pData['domain_info']),
+            "domain_name" => trim($pData['domain_name']),
+            "info_state" => $pData['info_state'],
+            "mail_brand" => trim($pData['mail_brand']),
+            "person_mail" => trim($pData['person_mail']),
+            "phone" => trim($pData['phone']),
             "update_date" => NOW
         );
-        return to_success($this->mysqlEdit("user_admin", $arrData, $filter));
+        $res = $this->mysqlEdit("company_list", $arrData, $filter);
+        if(!$res){
+            return to_error('修改失败');
+        }
+
+        //添加日志记录
+        $filter = " company_id = '{$pData['id']}' ";
+        $nowDate = date("Y-m-d",time());
+        $filter .= " AND create_date like '%{$nowDate}%' ";
+        $logNum = $this->__getCompanyConnectLogCount(' AND '.$filter);
+
+        if($logNum === 0 && $pData['connect_state'] == 1){
+            //添加一条记录
+            $res = $this->__addConnectLog($pData['id'],$pData['remark'],$pData['connect_state']);
+            if(!$res){
+                return to_error('添加操作记录日志失败');
+            }
+        }else if($logNum === 1){
+            //编辑当天记录
+            $res = $this->__editConnectLog($pData['id'],$pData['remark'],$pData['connect_state']);
+            if(!$res){
+                return to_error('添加操作记录日志失败');
+            }
+        }else if($logNum > 1){
+            return to_error('数据异常！请联系大猴子，存在多条记录');
+        }   
+        return to_success($res);
     }
 
-    //重置密码
-    public function editCompanyPwd(){
+    //获取公司联系日志
+    public function getConnectLog(){
         $pData = getData();
-        //验证数据
-        if(!$pData['password'] && strlen($pData['username']) < 6){
-            return to_error('操作失败，密码不能为空且不能至少6位。');
+        if(!$pData['company_id']){
+            return to_error('不能获取公司id');
         }
-        //查看用户是否存在
-        $filter = " user_name = '{$pData['username']}' AND user_id='{$pData['userid']}' ";
-        if($this->__getCompanyCount(' AND '.$filter) === 0){
-            return to_error('操作失败！该用户不存在。');
-        }else if($this->__getCompanyCount(' AND '.$filter) > 1){
-            return to_error('操作失败！非法用户，存在多个该用户名用户名');
-        }
-        $arrData = array(
-            "user_pwd" => $pData['password'],
-            "update_date" => NOW
-        );
-        return to_success($this->mysqlEdit("user_admin", $arrData, $filter));
+        $sql = "SELECT * FROM company_connect_log WHERE company_id={$pData['company_id']} AND state=1 order by 1 desc";
+        $res['items'] = $this->mysqlQuery($sql, "all");
+        $res['sql'] = $this->mysqlQuery($sql, "all");
+        return to_success($res);
     }
 
-    //删除公司
-    public function delCompany(){
-        $pData = getData();    
-        //查看用户是否存在
-        $filter = " user_name = '{$pData['username']}' AND user_id='{$pData['userid']}' ";
-        if($this->__getCompanyCount(' AND '.$filter) === 0){
-            return to_error('操作失败！该用户不存在。');
-        }else if($this->__getCompanyCount(' AND '.$filter) > 1){
-            return to_error('操作失败！非法用户，存在多个该用户名用户名');
-        }
-        $arrData = array(
-            "user_state" => -4,
-            "update_date" => NOW
-        );
-        return to_success($this->mysqlEdit("user_admin", $arrData, $filter));
-    }
     /*###########################################################
       #################### PRIVATE METHODS ######################
     */###########################################################
 
-    //存储用户的登录token
-    private function __saveLogin($uid,$token,$nowTime){
-        //登录用户入库
-    	$arrData = array(
-            "user_id" => $uid,
-            "user_token" => $token,
-            "login_state" => 1,
-            "create_date" => $nowTime,
-            "update_date" => $nowTime
-        );
-        return $this->mysqlInsert("user_admin_token", $arrData, 'single', true);
+    //获取公司总数目
+    private function __getCompanyCount($filter,$join=false,$filter2='',$filterTotal=''){
+        $sql = "SELECT COUNT(*) total FROM company_list WHERE 1=1 {$filter}";
+        if($join){
+            $sql = "SELECT count(*) total
+                FROM (SELECT * FROM company_list WHERE 1=1 {$filter} ) AS aa
+                LEFT JOIN (SELECT * FROM company_connect_log WHERE 1=1 {$filter2} ) AS bb
+                ON aa.id=bb.company_id WHERE 1=1 {$filterTotal} ";
+        }
+        
+        $res = $this->mysqlQuery($sql, "all");
+        return (int)$res[0]['total'];
     }
 
-    //获取admin总数目
-    private function __getCompanyCount($filter){
-        $sql = "SELECT COUNT(*) total FROM company WHERE 1=1 {$filter}";
+    //添加用户的联系日志
+    private function __addConnectLog($companyId,$remark,$state){
+        //登录用户入库
+        $arrData = array(
+            "company_id" => $companyId,
+            "remark" => $remark,
+            "state" => $state,
+            "create_date" => NOW,
+            "update_date" => NOW
+        );
+        return $this->mysqlInsert("company_connect_log", $arrData, 'single', true);
+    }
+
+    //编辑用户当天的联系日志
+    private function __editConnectLog($companyId,$remark,$state){
+        //登录用户入库
+        $arrData = array(
+            "remark" => $remark,
+            "state" => $state,
+            "update_date" => NOW
+        );
+        $nowDate = date("Y-m-d",time());
+        $filter = " company_id = '{$companyId}' AND create_date like '%{$nowDate}%' ";
+        return $this->mysqlEdit("company_connect_log", $arrData, $filter);
+    }
+
+    //获取公司联系总数目
+    private function __getCompanyConnectLogCount($filter){
+        $sql = "SELECT COUNT(*) total FROM company_connect_log WHERE 1=1 {$filter}";
         $res = $this->mysqlQuery($sql, "all");
         return (int)$res[0]['total'];
     }

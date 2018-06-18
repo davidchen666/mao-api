@@ -16,43 +16,40 @@ class CompanyController extends Controller
     {
         $this->model = Model::instance(self::M);
     }
-
-
     //验证token
-    //获取管理员信息
-    function getCompanyInfo(){
-        echo $this->model->getCompanyInfo();
-    }
-
-    //验证token
-    //获取管理员列表
+    //获取公司列表
     function getCompanyList(){
         echo $this->model->getCompanyList();
     }
 
     //验证token
-    //添加管理员
+    //添加公司
     function addCompany(){
         echo $this->model->addCompany();
     }
     
     //验证token
-    //添加管理员
+    //添加公司
     function editCompany(){
         echo $this->model->editCompany();
+    }
+
+    //获取公司联系日志
+    public function getConnectLog(){
+        echo $this->model->getConnectLog();
     }
     
     //验证token
     //重置密码
-    function editCompanyPwd(){
-        echo $this->model->editCompanyPwd();
-    }
+    // function editCompanyPwd(){
+    //     echo $this->model->editCompanyPwd();
+    // }
     
     //验证token
     //删除管理员
-    function delCompany(){
-        echo $this->model->delCompany();
-    }
+    // function delCompany(){
+    //     echo $this->model->delCompany();
+    // }
 
 }
 
