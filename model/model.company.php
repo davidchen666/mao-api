@@ -15,9 +15,13 @@ class CompanyModel extends AgentModel
         $pageSize = $pData['pageSize'] ? (int)$pData['pageSize'] : 10;
         //user_state=-4表示已删除的用户
         // $filter = 'AND user_state <> -4 ';
-        //搜索条件
+        //搜索条件-信息是否可用
         if($pData['info_state']){
             $filter .= " AND info_state='{$pData['info_state']}' ";
+        }
+        //搜索条件-报备状态
+        if($pData['report_state']){
+            $filter .= " AND report_state='{$pData['report_state']}' ";
         }
         // var_dump($pData);die();
         // if($pData['connect_state']){
@@ -73,9 +77,9 @@ class CompanyModel extends AgentModel
         if(!$pData['company_name'] && strlen($pData['company_name']) < 1){
             return to_error('公司名称不能为空且至少1位。');
         }
-        if(!$pData['info_state'] && ($pData['info_state'] != -1 || $pData['info_state'] != 1)){
-            return to_error('请选择信息状态');
-        }
+        // if(!$pData['info_state'] && ($pData['info_state'] != -1 || $pData['info_state'] != 1)){
+        //     return to_error('请选择信息状态');
+        // }
         // if(!$pData['connect_state'] && ($pData['connect_state'] != -1 || $pData['connect_state'] != 1)){
         //     return to_error('请选择联系状态');
         // }
@@ -87,8 +91,8 @@ class CompanyModel extends AgentModel
         $arrData = array(
             "company_name" => trim($pData['company_name']),
             "domain_info" => trim($pData['domain_info']),
+            "report_state" => $pData['report_state'],
             "domain_name" => trim($pData['domain_name']),
-            "info_state" => $pData['info_state'],
             "mail_brand" => trim($pData['mail_brand']),
             "person_mail" => trim($pData['person_mail']),
             "phone" => trim($pData['phone']),
@@ -105,12 +109,12 @@ class CompanyModel extends AgentModel
         if(!$pData['company_name'] && strlen($pData['company_name']) < 1){
             return to_error('公司名称不能为空且至少1位。');
         }
-        if(!$pData['info_state'] && ($pData['info_state'] != -1 || $pData['info_state'] != 1)){
-            return to_error('请选择信息状态');
-        }
-        if(!$pData['connect_state'] && ($pData['connect_state'] != -1 || $pData['connect_state'] != 1)){
-            return to_error('请选择联系状态');
-        }
+        // if(!$pData['info_state'] && ($pData['info_state'] != -1 || $pData['info_state'] != 1)){
+        //     return to_error('请选择信息状态');
+        // }
+        // if(!$pData['connect_state'] && ($pData['connect_state'] != -1 || $pData['connect_state'] != 1)){
+        //     return to_error('请选择联系状态');
+        // }
         //查看公司名是否存在
         $filter = " id = '{$pData['id']}' ";
         if($this->__getCompanyCount(' AND '.$filter) === 0){
@@ -121,8 +125,8 @@ class CompanyModel extends AgentModel
         $arrData = array(
             "company_name" => trim($pData['company_name']),
             "domain_info" => trim($pData['domain_info']),
+            "report_state" => $pData['report_state'],
             "domain_name" => trim($pData['domain_name']),
-            "info_state" => $pData['info_state'],
             "mail_brand" => trim($pData['mail_brand']),
             "person_mail" => trim($pData['person_mail']),
             "phone" => trim($pData['phone']),
