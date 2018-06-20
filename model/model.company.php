@@ -90,6 +90,7 @@ class CompanyModel extends AgentModel
         }
         $arrData = array(
             "company_name" => trim($pData['company_name']),
+            "company_remark" => trim($pData['company_remark']),
             "domain_info" => trim($pData['domain_info']),
             "report_state" => $pData['report_state'],
             "domain_name" => trim($pData['domain_name']),
@@ -124,6 +125,7 @@ class CompanyModel extends AgentModel
         }
         $arrData = array(
             "company_name" => trim($pData['company_name']),
+            "company_remark" => trim($pData['company_remark']),
             "domain_info" => trim($pData['domain_info']),
             "report_state" => $pData['report_state'],
             "domain_name" => trim($pData['domain_name']),
