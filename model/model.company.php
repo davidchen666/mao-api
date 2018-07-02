@@ -9,6 +9,7 @@ class CompanyModel extends AgentModel
         $filter = '';
         $filter2 = '';
         $filterTotal = '';
+        $nowDate = date("Y-m-d",time());
         //当前的页码
         $currentPage = $pData['currentPage'] ? (int)$pData['currentPage'] : 1;
         //每页显示的最大条数
@@ -23,6 +24,10 @@ class CompanyModel extends AgentModel
         if($pData['report_state']){
             $filter .= " AND report_state='{$pData['report_state']}' ";
         }
+        //搜索条件-提醒
+        if($pData['nextDate']){
+            $filter .= " AND next_date like '%{$nowDate}%' ";
+        }
         // var_dump($pData);die();
         // if($pData['connect_state']){
         //     $filter .= " AND connect_state='{$pData['connect_state']}' ";
@@ -31,10 +36,9 @@ class CompanyModel extends AgentModel
             $filterTotal .= " AND (bb.create_date>='{$pData['dateRange'][0]}' AND bb.create_date<='{$pData['dateRange'][1]}') ";
         }
         if($pData['searchVal']){
-            $filterTotal .= " AND (aa.company_name like '%{$pData['searchVal']}%' OR aa.domain_name like '%{$pData['searchVal']}%' OR aa.mail_brand like '%{$pData['searchVal']}%' OR aa.domain_info like '%{$pData['searchVal']}%' OR aa.person_mail like '%{$pData['searchVal']}%' OR aa.phone like '%{$pData['searchVal']}%' or bb.remark like '%{$pData['searchVal']}%' ) ";
+            $filterTotal .= " AND (aa.company_name like '%{$pData['searchVal']}%' OR aa.domain_name like '%{$pData['searchVal']}%' OR aa.mail_brand like '%{$pData['searchVal']}%' OR aa.domain_info like '%{$pData['searchVal']}%' OR aa.person_mail like '%{$pData['searchVal']}%' OR aa.phone like '%{$pData['searchVal']}%' OR aa.company_address like '%{$pData['searchVal']}%' or bb.remark like '%{$pData['searchVal']}%' ) ";
             // $filter .= "AND bb.remark like '%{$pData['searchVal']}%' ";
         }
-        $nowDate = date("Y-m-d",time());
         // $filter2 .= " AND state=1 AND create_date like '%{$nowDate}%' ";
         $filter2 .= " AND state=1 AND id in(SELECT MAX(id) FROM company_connect_log GROUP BY company_id ) ";
         //总条数
@@ -96,6 +100,8 @@ class CompanyModel extends AgentModel
             "domain_name" => trim($pData['domain_name']),
             "mail_brand" => trim($pData['mail_brand']),
             "person_mail" => trim($pData['person_mail']),
+            "company_address" => trim($pData['company_address']),
+            "next_date" => trim($pData['next_date']),
             "phone" => trim($pData['phone']),
             "create_date" => NOW,
             "update_date" => NOW
@@ -131,6 +137,8 @@ class CompanyModel extends AgentModel
             "domain_name" => trim($pData['domain_name']),
             "mail_brand" => trim($pData['mail_brand']),
             "person_mail" => trim($pData['person_mail']),
+            "company_address" => trim($pData['company_address']),
+            "next_date" => trim($pData['next_date']),
             "phone" => trim($pData['phone']),
             "update_date" => NOW
         );
