@@ -70,6 +70,10 @@ class CompanyModel extends AgentModel
             if($logDate  === $nowDate){
                 $res['items'][$k]['connect_state'] = '1';
             }
+            if($pData['data_type'] == 'connect_log'){
+                $logFilter = " company_id = '{$v['id']}' AND state=1 ";
+                $res['items'][$k]['connect_log'] = $this->__getCompanyConnectLog(' AND '.$logFilter);
+            }
         }
         return to_success($res);
     }
@@ -232,6 +236,13 @@ class CompanyModel extends AgentModel
         $sql = "SELECT COUNT(*) total FROM company_connect_log WHERE 1=1 {$filter}";
         $res = $this->mysqlQuery($sql, "all");
         return (int)$res[0]['total'];
+    }
+
+    //获取公司联系日志
+    private function __getCompanyConnectLog($filter){
+        $sql = "SELECT * FROM company_connect_log WHERE 1=1 {$filter}";
+        $res = $this->mysqlQuery($sql, "all");
+        return $res;
     }
 
 }
