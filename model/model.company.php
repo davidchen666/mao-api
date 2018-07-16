@@ -187,6 +187,16 @@ class CompanyModel extends AgentModel
         return to_success($res);
     }
 
+    //获得公司数量
+    public function getCompanyCount($filter,$join=false,$filter2='',$filterTotal=''){
+        return $this->__getCompanyCount($filter,$join=false,$filter2='',$filterTotal='');
+    }
+
+    //获取公司联系总数目
+    public function getCompanyConnectLogCount($filter){
+        return $this->__getCompanyConnectLogCount($filter);
+    }
+
     /*###########################################################
       #################### PRIVATE METHODS ######################
     */###########################################################
