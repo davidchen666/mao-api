@@ -82,6 +82,7 @@ class CompanyModel extends AgentModel
     public function addCompany(){
         $pData = getData();
         //验证数据
+        $pData['company_name'] = trim($pData['company_name']);
         if(!$pData['company_name'] && strlen($pData['company_name']) < 1){
             return to_error('公司名称不能为空且至少1位。');
         }
@@ -173,6 +174,25 @@ class CompanyModel extends AgentModel
             return to_error('数据异常！请联系大猴子，存在多条记录');
         }   
         return to_success($res);
+    }
+
+    //检查公司名是否重复
+    public function checkCompanyRepeat(){
+        $pData = getData();
+        $pData['company_name'] = trim($pData['company_name']);
+        //验证数据
+        if(!$pData['company_name'] && strlen($pData['company_name']) < 1){
+            return to_error('公司名称不能为空且至少1位。');
+        }
+        //查看公司名是否已经重复
+        $filter = " AND company_name = '{$pData['company_name']}' ";
+        $state = 1;
+        $msg = '可以使用';
+        if($this->__getCompanyCount($filter) > 0){
+            $state = -1;
+            $msg = '该公司名【'.$pData['company_name'].'】已重复，请更换公司名';
+        }
+        return to_success(array('state'=>$state,'msg'=>$msg));
     }
 
     //获取公司联系日志

@@ -38,6 +38,11 @@ class CompanyController extends Controller
     public function getConnectLog(){
         echo $this->model->getConnectLog();
     }
+
+    //检查公司名重复
+    public function checkCompanyRepeat(){
+        echo $this->model->checkCompanyRepeat();
+    }
     
     //验证token
     //重置密码

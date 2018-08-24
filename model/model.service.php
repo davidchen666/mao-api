@@ -86,7 +86,7 @@ class ServiceModel extends AgentModel
     public function sendMail($addNum,$connectNum,$nextNum){
         //当前年月日
         $nowDate = date("Y-m-d",time());
-        $downUrl = 'http://www.dxx-tech.top/mysql_backup/'.date("Ymd",time()).'.sql.gz';
+        $downUrl = 'http://mao.dxx-tech.top/mysql_backup/'.date("Ymd",time()).'.sql.gz';
         // 实例化PHPMailer核心类
         $mail = new PHPMailer();
         // 是否启用smtp的debug进行调试 开发环境建议开启 生产环境注释掉即可 默认关闭debug调试模式
